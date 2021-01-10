@@ -1,0 +1,106 @@
+The code below is how you could make the bmp and graphics layer global (to prevent stack problems when implementing flood fill)
+
+Imports System.Drawing
+' #############################################################################################
+' ### Work to do:
+' ###
+' ### Defining a new bitmap each time the user clicks, and when getting current pixel colour
+' ### is very memory inefficient. It is better to create a global bitmap variable, 
+' ### set the picture box to it when loaded, and operate from the single bitmap instance
+' ### flushing it back to the picturebox whenever appropriate.
+' ###
+' ### This MUST be done before you can write the floodfill, or it will chomp up meory after
+' ### a very short time
+' ###
+' ###
+' ### Another issue is the mouse move event on the image. If the form is resized past the image
+' ### an error will be generated when the sub attempts to get the current pixel colour
+' ### as there is no valid pixel within the grey part of the image
+' ###
+' ### This could be expanded to allow drawing of other shapes, etc.
+
+
+Public Class frmMain
+    ' global declarations can go here
+    Public CurrColour As New System.Drawing.Color
+    Public GotPic As Boolean = False
+    ' global graphics objects
+    Dim bmp As Bitmap ' will assign when image is loaded
+    Dim Gr As Graphics
+    Dim br As SolidBrush
+
+    Private Sub frmMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' set default colours here
+        CurrColour = Color.Black
+        br = New SolidBrush(CurrColour) ' Initialise brush with current colour 
+        ShowColour()
+    End Sub
+
+    Public Sub ShowColour()
+        lblCurrentColour.BackColor = CurrColour
+    End Sub
+
+    Private Sub btnClr_Click(sender As Object, e As EventArgs) Handles btnClr.Click
+        Dim c As New ColorDialog
+        c.Color = CurrColour
+        If c.ShowDialog = DialogResult.OK Then
+            CurrColour = c.Color
+            br = New SolidBrush(CurrColour) ' Initialise brush with current colour 
+            ShowColour()
+        End If
+    End Sub
+
+    Private Sub btnOpen_Click(sender As Object, e As EventArgs) Handles btnOpen.Click
+        Dim GetFile As New OpenFileDialog
+        If GetFile.ShowDialog = DialogResult.OK Then
+            ' load file
+            pBox.Load(GetFile.FileName)
+            ' ToDo: Set form/picturebox size to match picture
+            bmp = New Bitmap(pBox.Image)
+            Gr = Graphics.FromImage(bmp)
+            GotPic = True
+        End If
+    End Sub
+
+    Private Sub pBox_MouseUp(sender As Object, e As MouseEventArgs) Handles pBox.MouseUp
+        ' mouse up exposes x and y coordinates, whereas mouse click does not
+        If GotPic = False Then
+            MessageBox.Show("Sorry, please load a picture first", "Error - No Picture", MessageBoxButtons.OK)
+            Exit Sub
+        Else
+            ' get mouse position (i.e. click)
+            Dim pos As New Point(e.X, e.Y) ' lock point
+            Try
+                ' make changes to graphicics layer (gr)
+
+                ' the code below simply adds a filled rectangle in the coordinates given 1x1 pixel. If allowing drawing, this could change to a circle/rectangle
+                Gr.FillRectangle(br, pos.X, pos.Y, 1, 1) ' create a point 1x1 pixel at point using the fill brush defined above
+
+                ' save back to picturebox to view
+                pBox.Image = bmp
+            Catch ex As Exception
+
+            End Try
+
+
+        End If
+    End Sub
+
+    Private Sub pBox_MouseMove(sender As Object, e As MouseEventArgs) Handles pBox.MouseMove
+        ' show current pixel colour
+        ' picturebox has no way of accessing pixels, so we convert the image to a bitmap and then examine the x and y coordinate to get the colour
+
+        ' This is inefficient and is better to make use of the global bitmap
+
+        If GotPic Then lblCursorColour.BackColor = CType(pBox.Image, Bitmap).GetPixel(e.X, e.Y) ' only perform if there's a picture loaded
+    End Sub
+
+    Private Sub btnSave_Click(sender As Object, e As EventArgs) Handles btnSave.Click
+        ' ToDo: code to save file
+        ' This is actually quite straightforward
+    End Sub
+
+    Private Sub btnClose_Click(sender As Object, e As EventArgs) Handles btnClose.Click
+        'ToDo: Code to quit
+    End Sub
+End Class
